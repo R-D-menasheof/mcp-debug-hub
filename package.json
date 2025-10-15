@@ -1,0 +1,104 @@
+{
+  "name": "mcp-debug-hub",
+  "displayName": "MCP Debug Hub",
+  "description": "VS code extension debug server with MCP API",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcpDebugHub.start",
+        "title": "MCP Debug Hub: Start"
+      },
+      {
+        "command": "mcpDebugHub.stop",
+        "title": "MCP Debug Hub: Stop"
+      },
+      {
+        "command": "mcpDebugHub.restart",
+        "title": "MCP Debug Hub: Restart"
+      },
+      {
+        "command": "mcpDebugHub.showStatus",
+        "title": "MCP Debug Hub: Show Status"
+      },
+      {
+        "command": "mcpDebugHub.getServerUrl",
+        "title": "MCP Debug Hub: Get Server URL"
+      }
+    ],
+    "configuration": {
+      "title": "MCP Debug Hub",
+      "properties": {
+        "mcpDebugHub.ssePort": {
+          "type": "number",
+          "default": 37337,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Port number for the MCP SSE (Server-Sent Events) server. Used by AI clients like Cursor, Continue, and Cline to connect for debugging."
+        },
+        "mcpDebugHub.sseHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host address where the MCP SSE server will listen. Use 'localhost' for local connections or '0.0.0.0' to allow remote connections."
+        },
+        "mcpDebugHub.autostart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start the MCP server when VS Code opens. When disabled, use 'MCP Debug Hub: Start Server' command to start manually."
+        },
+        "mcpDebugHub.logLevel": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info",
+          "description": "Logging verbosity level. 'debug' shows all messages, 'error' shows only errors. View logs in the 'MCP Debug Hub' output channel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.105.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.10",
+    "eslint": "^9.36.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^3.25.76"
+  }
+}
