@@ -1,5 +1,7 @@
 # MCP Debug Hub
 
+[![Build VSIX](https://github.com/R-D-menasheof/mcp-debug-hub/actions/workflows/build-vsix.yml/badge.svg)](https://github.com/R-D-menasheof/mcp-debug-hub/actions/workflows/build-vsix.yml)
+
 `mcp-debug-hub` is a VS Code extension that exposes VS Code's debugging capabilities through the Model Context Protocol (MCP). It enables AI coding assistants (such as Cline, Claude, Cursor, or Copilot) to control and inspect debugging sessions directly within VS Code, providing powerful debugging automation and inspection capabilities.
 
 ## Key features
