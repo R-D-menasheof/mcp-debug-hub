@@ -3,8 +3,12 @@
   "displayName": "MCP Debug Hub",
   "description": "VS code extension debug server with MCP API",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/R-D-menasheof/mcp-debug-hub.git"
+  },
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.105.0"
   },
   "categories": [
     "Other"
@@ -82,7 +86,8 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "vsix": "npm run package && npx shx mkdir -p dist && npx vsce package --out dist/mcp-debug-hub.vsix"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -92,9 +97,11 @@
     "@typescript-eslint/parser": "^8.45.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.10",
     "eslint": "^9.36.0",
     "npm-run-all": "^4.1.5",
+    "shx": "^0.3.4",
     "typescript": "^5.9.3"
   },
   "dependencies": {
