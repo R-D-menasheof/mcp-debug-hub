@@ -4,6 +4,7 @@
   "displayName": "MCP Debug Hub",
   "description": "VS code extension debug server with MCP API",
   "version": "0.1.0",
+  "icon": "images/logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/R-D-menasheof/mcp-debug-hub.git"
