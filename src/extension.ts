@@ -3,11 +3,13 @@ import { getLogger } from "@/logger";
 import { ConfigManager } from "@/config/config-manager";
 import { Debug } from "@/managers/debug";
 import { HttpMcpServer } from "@/mcp/server";
+import { StatusViewProvider } from "@/ui/StatusViewProvider";
 import { EXTENSION_ID } from "@/constants";
 
 let configManager: ConfigManager;
 let debugManager: Debug;
 let mcpServer: HttpMcpServer;
+let statusViewProvider: StatusViewProvider;
 
 export function activate(context: vscode.ExtensionContext) {
   configManager = new ConfigManager();
@@ -29,6 +31,22 @@ export function activate(context: vscode.ExtensionContext) {
     configManager.sseHost,
     extensionVersion
   );
+
+  // Register UI view provider
+  statusViewProvider = new StatusViewProvider(
+    context.extensionUri,
+    mcpServer,
+    configManager
+  );
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      StatusViewProvider.viewType,
+      statusViewProvider
+    )
+  );
+
+  logger.info("UI view provider registered");
 
   if (configManager.autostart) {
     mcpServer.start().catch((error) => {
@@ -155,5 +173,10 @@ export async function deactivate() {
   if (debugManager) {
     debugManager.dispose();
     logger.info("Debug manager disposed");
+  }
+
+  if (statusViewProvider) {
+    statusViewProvider.dispose();
+    logger.info("UI view provider disposed");
   }
 }
