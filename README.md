@@ -34,7 +34,37 @@ code --install-extension dist/mcp-debug-hub.vsix
 
 ### MCP Client configuration
 
-Add the following config to your MCP client:
+Configure your MCP client according to which one you're using. Each client has a slightly different configuration format.
+
+> [!NOTE]  
+> The default port is 37337. You can change this in VS Code settings under `mcpDebugHub.ssePort`.
+
+### MCP Client configuration examples
+
+<details>
+  <summary>Cursor</summary>
+
+Go to `Cursor Settings` -> `MCP` -> Edit Config (or directly edit `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "debug-mcp": {
+      "url": "http://localhost:37337/mcp"
+    }
+  }
+}
+```
+
+> [!TIP]
+> Note that Cursor uses the `/mcp` endpoint (not `/sse`) and a simpler configuration format.
+
+</details>
+
+<details>
+  <summary>Cline</summary>
+  
+Follow the [Cline MCP documentation](https://docs.cline.bot/mcp/configuring-mcp-servers) and add this configuration:
 
 ```json
 {
@@ -51,23 +81,7 @@ Add the following config to your MCP client:
 }
 ```
 
-> [!NOTE]  
-> The default port is 37337. You can change this in VS Code settings under `mcpDebugHub.ssePort`.
-
-### MCP Client configuration examples
-
-<details>
-  <summary>Cline</summary>
-  
-  Follow https://docs.cline.bot/mcp/configuring-mcp-servers and use the config provided above.
-  
-  Make sure to configure the SSE transport type correctly.
-</details>
-
-<details>
-  <summary>Cursor</summary>
-
-Go to `Cursor Settings` -> `MCP` -> `New MCP Server`. Use the config provided above with the SSE transport configuration.
+Make sure to configure the SSE transport type correctly.
 
 </details>
 
@@ -347,14 +361,40 @@ To use a different port, update your VS Code settings:
 }
 ```
 
-Then update your MCP client configuration to use the new port:
+Then update your MCP client configuration to use the new port. The exact format depends on your client:
 
+**For Cursor:**
+```json
+{
+  "mcpServers": {
+    "debug-mcp": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+**For Cline:**
 ```json
 {
   "mcpServers": {
     "debug-mcp": {
       "command": "node",
       "args": [],
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:8080/sse"
+      }
+    }
+  }
+}
+```
+
+**For Continue:**
+```json
+{
+  "mcpServers": {
+    "debug-mcp": {
       "transport": {
         "type": "sse",
         "url": "http://localhost:8080/sse"
