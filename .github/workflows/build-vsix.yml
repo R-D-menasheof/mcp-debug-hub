@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Run type checking, linting, and tests
+  # Run compilation checks (type checking, linting, and build)
   quality-checks:
     runs-on: ubuntu-latest
     strategy:
@@ -28,14 +28,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Type check
-      run: npm run check-types
-      
-    - name: Lint
-      run: npm run lint
-      
-    - name: Run tests
-      run: npm test
+    - name: Compile (includes type check, lint, and build)
+      run: npm run compile
 
   # Build and package the VSIX
   build:
