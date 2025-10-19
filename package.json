@@ -18,6 +18,25 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mcpDebugHub",
+          "title": "MCP Debug Hub",
+          "icon": "$(debug-alt)"
+        }
+      ]
+    },
+    "views": {
+      "mcpDebugHub": [
+        {
+          "type": "webview",
+          "id": "mcpDebugHub.statusView",
+          "name": "Server Status",
+          "contextualTitle": "MCP Debug Hub"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "mcpDebugHub.start",
