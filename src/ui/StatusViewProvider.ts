@@ -49,6 +49,18 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
         case 'openLogs':
           await vscode.commands.executeCommand(`${EXTENSION_ID}.showStatus`);
           break;
+        case 'setAutostart':
+          try {
+            await this._configManager.setAutostart(data.value);
+            vscode.window.showInformationMessage(
+              `Autostart ${data.value ? 'enabled' : 'disabled'}`
+            );
+          } catch (error) {
+            vscode.window.showErrorMessage(
+              `Failed to update autostart: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+          break;
       }
     });
 
@@ -377,6 +389,71 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       justify-content: center;
     }
 
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-md);
+      background: var(--vscode-editorWidget-background);
+      border: var(--border-width) solid var(--vscode-editorWidget-border);
+      border-radius: var(--radius);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .toggle-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--vscode-foreground);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--vscode-input-background);
+      border: var(--border-width) solid var(--vscode-input-border);
+      transition: 0.2s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--vscode-foreground);
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--vscode-button-background);
+      border-color: var(--vscode-button-background);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+      background-color: var(--vscode-button-foreground);
+    }
+
     .footer {
       padding-top: var(--spacing-md);
       border-top: var(--border-width) solid var(--vscode-panel-border);
@@ -456,6 +533,14 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
 
+  <div class="toggle-row">
+    <span class="toggle-label">Autostart Server</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="toggleAutostart">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
   <div class="quick-actions">
     <div class="section-title">Quick Actions</div>
     <div class="quick-action-grid">
@@ -512,6 +597,11 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
+    // Autostart toggle handler
+    document.getElementById('toggleAutostart').addEventListener('change', (e) => {
+      vscode.postMessage({ type: 'setAutostart', value: e.target.checked });
+    });
+
     function updateUI(data) {
       const statusPill = document.getElementById('statusPill');
       const btnStart = document.getElementById('btnStart');
@@ -521,6 +611,7 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       const connectionCount = document.getElementById('connectionCount');
       const metricSessions = document.getElementById('metricSessions');
       const metricUptime = document.getElementById('metricUptime');
+      const toggleAutostart = document.getElementById('toggleAutostart');
 
       if (data.isRunning) {
         statusPill.textContent = 'Running';
@@ -548,6 +639,7 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
 
       connectionCount.textContent = data.activeConnections;
       metricSessions.textContent = data.activeConnections;
+      toggleAutostart.checked = data.autostart;
     }
   </script>
 </body>

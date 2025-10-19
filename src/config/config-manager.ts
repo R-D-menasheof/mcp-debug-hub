@@ -19,6 +19,10 @@ export class ConfigManager {
     return this.getConfig().get("logLevel", "info");
   }
 
+  async setAutostart(value: boolean): Promise<void> {
+    await this.getConfig().update("autostart", value, vscode.ConfigurationTarget.Global);
+  }
+
   onDidChange(callback: () => void): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(EXTENSION_ID)) {
