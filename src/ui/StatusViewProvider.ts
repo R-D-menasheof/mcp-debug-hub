@@ -95,6 +95,16 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MCP Debug Hub</title>
   <style>
+    :root {
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 12px;
+      --spacing-lg: 16px;
+      --spacing-xl: 20px;
+      --radius: 6px;
+      --border-width: 1px;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -105,100 +115,121 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
       color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      padding: 16px;
+      background: var(--vscode-sideBar-background);
+      padding: var(--spacing-lg);
     }
 
     .header {
-      background: linear-gradient(135deg, var(--vscode-button-background) 0%, var(--vscode-button-hoverBackground) 100%);
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      background: var(--vscode-sideBarSectionHeader-background);
+      border: var(--border-width) solid var(--vscode-sideBarSectionHeader-border);
+      border-radius: var(--radius);
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
     }
 
     .header-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-bottom: var(--spacing-md);
     }
 
     .logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--spacing-md);
     }
 
     .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--vscode-editor-background);
-      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      background: var(--vscode-badge-background);
+      border-radius: var(--radius);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      color: var(--vscode-badge-foreground);
+      font-weight: bold;
+      font-size: 16px;
     }
 
     .logo-text {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 600;
-      color: var(--vscode-editor-background);
+      color: var(--vscode-foreground);
     }
 
     .status-pill {
-      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-md);
       border-radius: 12px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      border: var(--border-width) solid transparent;
+    }
+
+    .status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
     }
 
     .status-running {
-      background: rgba(76, 175, 80, 0.2);
-      color: #4CAF50;
-      border: 1px solid #4CAF50;
+      background: var(--vscode-testing-iconPassed);
+      color: var(--vscode-sideBar-background);
+    }
+
+    .status-running::before {
+      background: var(--vscode-sideBar-background);
     }
 
     .status-stopped {
-      background: rgba(244, 67, 54, 0.2);
-      color: #F44336;
-      border: 1px solid #F44336;
+      background: var(--vscode-inputValidation-errorBackground);
+      color: var(--vscode-inputValidation-errorForeground);
+      border-color: var(--vscode-inputValidation-errorBorder);
+    }
+
+    .status-stopped::before {
+      background: var(--vscode-inputValidation-errorForeground);
     }
 
     .server-info {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: var(--spacing-md);
+      border-top: var(--border-width) solid var(--vscode-panel-border);
     }
 
     .info-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 13px;
+      padding: var(--spacing-xs) 0;
+      font-size: 12px;
     }
 
     .info-label {
-      opacity: 0.7;
+      color: var(--vscode-descriptionForeground);
     }
 
     .info-value {
       font-weight: 600;
       font-family: var(--vscode-editor-font-family);
+      color: var(--vscode-foreground);
     }
 
     .connection-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      font-size: 12px;
+      gap: var(--spacing-xs);
+      padding: 2px var(--spacing-sm);
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      border-radius: var(--radius);
+      font-size: 11px;
       font-weight: 600;
     }
 
@@ -206,47 +237,77 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #4CAF50;
+      background: var(--vscode-testing-iconPassed);
       animation: pulse 2s infinite;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+      50% { opacity: 0.4; }
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .metric-card {
+      background: var(--vscode-editorWidget-background);
+      border: var(--border-width) solid var(--vscode-editorWidget-border);
+      border-radius: var(--radius);
+      padding: var(--spacing-md);
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--vscode-textLink-foreground);
+      margin-bottom: var(--spacing-xs);
+      font-family: var(--vscode-editor-font-family);
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .actions {
-      margin-bottom: 16px;
+      margin-bottom: var(--spacing-lg);
     }
 
     .action-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
     }
 
     button {
-      padding: 10px 16px;
+      padding: var(--spacing-md) var(--spacing-lg);
       border: none;
-      border-radius: 6px;
+      border-radius: var(--radius);
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: var(--spacing-sm);
+      font-family: var(--vscode-font-family);
     }
 
     button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      opacity: 0.9;
     }
 
     button:active {
-      transform: translateY(0);
+      opacity: 0.8;
     }
 
     .btn-primary {
@@ -268,82 +329,59 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
     }
 
     .btn-danger {
-      background: rgba(244, 67, 54, 0.8);
-      color: white;
+      background: var(--vscode-inputValidation-errorBackground);
+      color: var(--vscode-inputValidation-errorForeground);
+      border: var(--border-width) solid var(--vscode-inputValidation-errorBorder);
     }
 
     .btn-danger:hover {
-      background: rgba(244, 67, 54, 1);
+      opacity: 1;
+      filter: brightness(1.1);
     }
 
     .btn-full {
       grid-column: 1 / -1;
     }
 
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .metric-card {
-      background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-input-border);
-      border-radius: 8px;
-      padding: 12px;
-      text-align: center;
-    }
-
-    .metric-value {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--vscode-button-background);
-      margin-bottom: 4px;
-    }
-
-    .metric-label {
-      font-size: 11px;
-      opacity: 0.7;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
     .quick-actions {
-      margin-bottom: 16px;
+      margin-bottom: var(--spacing-lg);
     }
 
     .section-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      opacity: 0.7;
-      margin-bottom: 8px;
+      color: var(--vscode-descriptionForeground);
+      margin-bottom: var(--spacing-sm);
     }
 
     .quick-action-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
+      gap: var(--spacing-sm);
     }
 
     .quick-action-btn {
-      padding: 8px;
-      font-size: 11px;
-      flex-direction: column;
-      gap: 4px;
+      padding: var(--spacing-sm);
+      font-size: 12px;
+      justify-content: flex-start;
+      gap: var(--spacing-sm);
     }
 
     .icon {
-      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .footer {
-      padding-top: 12px;
-      border-top: 1px solid var(--vscode-input-border);
-      font-size: 11px;
-      opacity: 0.5;
+      padding-top: var(--spacing-md);
+      border-top: var(--border-width) solid var(--vscode-panel-border);
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
       text-align: center;
     }
 
@@ -356,7 +394,7 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
   <div class="header">
     <div class="header-content">
       <div class="logo">
-        <div class="logo-icon">🔧</div>
+        <div class="logo-icon">⚡</div>
         <div class="logo-text">MCP Debug Hub</div>
       </div>
       <div id="statusPill" class="status-pill status-stopped">Stopped</div>
@@ -398,21 +436,21 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
   <div class="actions">
     <div class="action-row">
       <button id="btnStart" class="btn-primary">
-        <span class="icon">▶️</span>
+        <span class="icon">▶</span>
         <span>Start</span>
       </button>
       <button id="btnStop" class="btn-danger hidden">
-        <span class="icon">⏹️</span>
+        <span class="icon">■</span>
         <span>Stop</span>
       </button>
       <button id="btnRestart" class="btn-secondary">
-        <span class="icon">🔄</span>
+        <span class="icon">↻</span>
         <span>Restart</span>
       </button>
     </div>
     <div class="action-row">
       <button id="btnCopyUrl" class="btn-secondary btn-full">
-        <span class="icon">📋</span>
+        <span class="icon">⎘</span>
         <span>Copy Server URL</span>
       </button>
     </div>
@@ -422,11 +460,11 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
     <div class="section-title">Quick Actions</div>
     <div class="quick-action-grid">
       <button id="btnSettings" class="btn-secondary quick-action-btn">
-        <span class="icon">⚙️</span>
+        <span class="icon">⚙</span>
         <span>Settings</span>
       </button>
       <button id="btnLogs" class="btn-secondary quick-action-btn">
-        <span class="icon">📝</span>
+        <span class="icon">≡</span>
         <span>Logs</span>
       </button>
     </div>
