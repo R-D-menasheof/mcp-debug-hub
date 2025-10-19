@@ -23,7 +23,7 @@
         {
           "id": "mcpDebugHub",
           "title": "MCP Debug Hub",
-          "icon": "$(debug-alt)"
+          "icon": "$(layers)"
         }
       ]
     },
