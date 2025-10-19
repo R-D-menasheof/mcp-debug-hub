@@ -1,5 +1,6 @@
 {
   "name": "mcp-debug-hub",
+  "publisher": "RDMenasheof",
   "displayName": "MCP Debug Hub",
   "description": "VS code extension debug server with MCP API",
   "version": "0.1.0",
