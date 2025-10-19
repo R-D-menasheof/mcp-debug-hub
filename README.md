@@ -11,6 +11,7 @@
 - **Code execution control**: Step through code, continue execution, and pause at any point
 - **Runtime inspection**: Evaluate expressions, inspect variables, and examine call stacks
 - **Multi-language support**: Works with any language supported by VS Code's debug adapters
+- **Built-in status view**: Monitor server status, active connections, and metrics from the activity bar. Includes quick actions for server control, URL copying, and autostart toggle
 
 ## Requirements
 
@@ -95,8 +96,9 @@ Add the configuration to your Continue config file (`~/.continue/config.json`):
 
 The extension can start automatically when VS Code opens (configure `mcpDebugHub.autostart` in settings), or manually using:
 
-- Command Palette: `MCP Debug Hub: Start`
-- Or via the status bar item
+- Open the MCP Debug Hub view from the activity bar (layers icon)
+- Click the **Start** button or enable the **Autostart** toggle
+- Alternatively, use Command Palette: `MCP Debug Hub: Start`
 
 ### Your first prompt
 
@@ -326,7 +328,7 @@ The MCP Debug Hub extension supports the following configuration options in VS C
   - **Default:** `"localhost"`
 
 - **`mcpDebugHub.autostart`**
-  Automatically start the MCP server when VS Code opens. When disabled, use 'MCP Debug Hub: Start Server' command to start manually.
+  Automatically start the MCP server when VS Code opens. When disabled, use 'MCP Debug Hub: Start Server' command to start manually. This setting can also be toggled directly from the MCP Debug Hub status view.
 
   - **Type:** boolean
   - **Default:** `false`
