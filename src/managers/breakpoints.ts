@@ -122,4 +122,3 @@ export class Breakpoints {
     vscode.debug.addBreakpoints([newBp]);
   }
 }
-

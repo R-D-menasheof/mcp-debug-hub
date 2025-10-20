@@ -9,19 +9,20 @@ export class Inspection {
     expression: string,
     frameId?: number,
     context?: "watch" | "repl" | "hover",
+    session?: vscode.DebugSession,
   ): Promise<string> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     try {
       let actualFrameId = frameId;
       if (actualFrameId === undefined) {
-        actualFrameId = await this.getCurrentFrameId(session);
+        actualFrameId = await this.getCurrentFrameId(targetSession);
       }
 
-      const response = await session.customRequest("evaluate", {
+      const response = await targetSession.customRequest("evaluate", {
         expression,
         frameId: actualFrameId,
         context: context || "repl",
@@ -29,19 +30,25 @@ export class Inspection {
 
       return response.result;
     } catch (error) {
-      logger.error("Failed to evaluate expression", error as Error, { expression });
+      logger.error("Failed to evaluate expression", error as Error, {
+        expression,
+        sessionId: targetSession.id,
+      });
       throw error;
     }
   }
 
-  async getStackTrace(threadId: number): Promise<StackFrameInfo[]> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async getStackTrace(
+    threadId: number,
+    session?: vscode.DebugSession,
+  ): Promise<StackFrameInfo[]> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     try {
-      const response = await session.customRequest("stackTrace", {
+      const response = await targetSession.customRequest("stackTrace", {
         threadId,
         startFrame: 0,
         levels: 50,
@@ -61,19 +68,23 @@ export class Inspection {
     } catch (error) {
       logger.warn("Failed to get stack trace", {
         error: error instanceof Error ? error.message : String(error),
+        sessionId: targetSession.id,
       });
       return [];
     }
   }
 
-  async getVariables(variablesReference: number): Promise<VariableInfo[]> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async getVariables(
+    variablesReference: number,
+    session?: vscode.DebugSession,
+  ): Promise<VariableInfo[]> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     try {
-      const response = await session.customRequest("variables", {
+      const response = await targetSession.customRequest("variables", {
         variablesReference,
       });
 
@@ -90,24 +101,28 @@ export class Inspection {
     } catch (error) {
       logger.warn("Failed to get variables", {
         error: error instanceof Error ? error.message : String(error),
+        sessionId: targetSession.id,
       });
       return [];
     }
   }
 
-  async getScopes(frameId?: number): Promise<any[]> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async getScopes(
+    frameId?: number,
+    session?: vscode.DebugSession,
+  ): Promise<any[]> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     try {
       let actualFrameId = frameId;
       if (actualFrameId === undefined) {
-        actualFrameId = await this.getCurrentFrameId(session);
+        actualFrameId = await this.getCurrentFrameId(targetSession);
       }
 
-      const response = await session.customRequest("scopes", {
+      const response = await targetSession.customRequest("scopes", {
         frameId: actualFrameId,
       });
 
@@ -115,51 +130,65 @@ export class Inspection {
     } catch (error) {
       logger.warn("Failed to get scopes", {
         error: error instanceof Error ? error.message : String(error),
+        sessionId: targetSession.id,
       });
       return [];
     }
   }
 
-  async getCurrentLocation(): Promise<DebugLocation | null> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
-      return null;
+  async getCurrentLocation(
+    session?: vscode.DebugSession,
+  ): Promise<DebugLocation[]> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
+      return [];
     }
 
     try {
-      const threadsResponse = await session.customRequest("threads");
+      const threadsResponse = await targetSession.customRequest("threads");
       if (!threadsResponse?.threads || threadsResponse.threads.length === 0) {
-        return null;
+        return [];
       }
 
-      const threadId = threadsResponse.threads[0].id;
-      const stackResponse = await session.customRequest("stackTrace", {
-        threadId,
-        startFrame: 0,
-        levels: 1,
-      });
+      const locations: DebugLocation[] = [];
 
-      if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
-        return null;
+      for (const thread of threadsResponse.threads) {
+        try {
+          const stackResponse = await targetSession.customRequest("stackTrace", {
+            threadId: thread.id,
+            startFrame: 0,
+            levels: 1,
+          });
+
+          if (stackResponse?.stackFrames && stackResponse.stackFrames.length > 0) {
+            const topFrame = stackResponse.stackFrames[0];
+            const filePath = topFrame.source?.path;
+
+            if (filePath) {
+              locations.push({
+                threadId: thread.id,
+                threadName: thread.name,
+                file: filePath,
+                line: topFrame.line,
+                column: topFrame.column,
+              });
+            }
+          }
+        } catch (threadError) {
+          logger.debug("Failed to get location for thread", {
+            threadId: thread.id,
+            error: threadError instanceof Error ? threadError.message : String(threadError),
+          });
+        }
       }
 
-      const topFrame = stackResponse.stackFrames[0];
-      const filePath = topFrame.source?.path;
-
-      if (!filePath) {
-        return null;
-      }
-
-      return {
-        file: filePath,
-        line: topFrame.line,
-        column: topFrame.column,
-      };
+      return locations;
     } catch (error) {
-      logger.warn("Failed to get current location", {
+      logger.warn("Failed to get current locations", {
         error: error instanceof Error ? error.message : String(error),
+        sessionId: targetSession.id,
       });
-      return null;
+      return [];
     }
   }
 
@@ -183,4 +212,3 @@ export class Inspection {
     return stackResponse.stackFrames[0].id;
   }
 }
-

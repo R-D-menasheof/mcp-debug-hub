@@ -40,7 +40,6 @@ export class Debug {
     this.disposables.push(
       vscode.debug.onDidTerminateDebugSession((session) => {
         logger.info("Debug session terminated", { id: session.id });
-        this.sessions.removeSession(session.id);
       }),
     );
 
@@ -70,8 +69,8 @@ export class Debug {
   }
 
   dispose(): void {
+    this.sessions.dispose();
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
   }
 }
-

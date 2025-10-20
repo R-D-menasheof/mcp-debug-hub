@@ -7,17 +7,19 @@
 ## Key features
 
 - **Debug session control**: Launch, stop, and manage VS Code debug sessions programmatically
+- **Multi-process debugging**: Debug parent-child process hierarchies with full support for subprocesses, workers, and spawned processes
 - **Breakpoint management**: Set, remove, and list breakpoints with conditions, hit counts, and log messages
 - **Code execution control**: Step through code, continue execution, and pause at any point
 - **Runtime inspection**: Evaluate expressions, inspect variables, and examine call stacks
+- **Session-aware operations**: Target specific debug sessions in multi-process scenarios
 - **Multi-language support**: Works with any language supported by VS Code's debug adapters
 - **Built-in status view**: Monitor server status, active connections, and metrics from the activity bar. Includes quick actions for server control, URL copying, and autostart toggle
 
 ## Requirements
 
-- [VS Code](https://code.visualstudio.com/) version 1.105.0 or newer
+- [VS Code](https://code.visualstudio.com/) version 1.99.0 or newer
 - [Node.js](https://nodejs.org/) v22.x or newer
-- A workspace with a configured `launch.json` file for your project
+- A workspace with debug configurations (in `launch.json` or `workspace.code-workspace`)
 
 ## Getting started
 
@@ -116,7 +118,7 @@ The extension can start automatically when VS Code opens (configure `mcpDebugHub
 
 ### Your first prompt
 
-1. Make sure you have a `launch.json` file in your workspace `.vscode` folder
+1. Make sure you have debug configurations in your workspace (`.vscode/launch.json` or `workspace.code-workspace`)
 2. Enter the following prompt in your MCP Client:
 
 ```
@@ -129,11 +131,15 @@ Your MCP client should launch the debug session and set the breakpoint.
 
 <!-- Tool categories organized by functionality -->
 
-- **Debug session management** (3 tools)
+- **Debug session management** (7 tools)
 
   - [`launch_debug`](#launch_debug)
+  - [`launch_child_debug`](#launch_child_debug)
   - [`stop_debug`](#stop_debug)
   - [`get_debug_state`](#get_debug_state)
+  - [`list_debug_sessions`](#list_debug_sessions)
+  - [`get_session_hierarchy`](#get_session_hierarchy)
+  - [`get_session_info`](#get_session_info)
 
 - **Breakpoint management** (5 tools)
 
@@ -151,8 +157,9 @@ Your MCP client should launch the debug session and set the breakpoint.
   - [`step_into`](#step_into)
   - [`step_out`](#step_out)
 
-- **Runtime inspection** (4 tools)
+- **Runtime inspection** (5 tools)
   - [`evaluate_expression`](#evaluate_expression)
+  - [`list_threads`](#list_threads)
   - [`get_stack_frames`](#get_stack_frames)
   - [`get_variables`](#get_variables)
   - [`get_current_location`](#get_current_location)
@@ -161,11 +168,11 @@ Your MCP client should launch the debug session and set the breakpoint.
 
 #### launch_debug
 
-Launches a new debug session using a named configuration from the workspace `launch.json` file.
+Launches a new debug session using a named configuration from workspace settings (launch.json or workspace.code-workspace).
 
 **Parameters:**
 
-- `configuration` (string, required): Name of the debug configuration from launch.json (e.g., "Python: Current File", "Node: Launch Program")
+- `configuration` (string, required): Name of the debug configuration from workspace settings (e.g., "Python: Current File", "Node: Launch Program")
 
 **Example:**
 
@@ -175,17 +182,95 @@ Launches a new debug session using a named configuration from the workspace `lau
 }
 ```
 
+#### launch_child_debug
+
+Launches a new debug session as a child of an existing session. Useful for debugging subprocesses, workers, or spawned processes in multi-process applications.
+
+**Parameters:**
+
+- `parentSessionId` (string, required): ID of the parent debug session
+- `configuration` (string, required): Name of the debug configuration from workspace settings
+- `consoleMode` (string, optional): Whether to use a separate console or merge with parent (default: "separate"). Options: "separate", "merged"
+- `lifecycleManagedByParent` (boolean, optional): Whether lifecycle (restart/stop) is managed by parent (default: false)
+
+**Example:**
+
+```json
+{
+  "parentSessionId": "abc123",
+  "configuration": "Python: Worker Process",
+  "consoleMode": "merged",
+  "lifecycleManagedByParent": true
+}
+```
+
 #### stop_debug
 
-Stops the currently active debug session and terminates the debugged program.
+Stops a debug session and terminates the debugged program. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID to stop. If not provided, stops the active session
+
+**Example:**
+
+```json
+{
+  "sessionId": "worker-123"
+}
+```
 
 #### get_debug_state
 
 Gets detailed information about the currently active debug session including session ID, state, and configuration.
 
 **Parameters:** None
+
+#### list_debug_sessions
+
+Lists all active debug sessions with their hierarchy information. Shows parent-child relationships for multi-process debugging scenarios.
+
+**Parameters:** None
+
+**Example output:**
+
+```json
+{
+  "sessions": [
+    {
+      "id": "main-123",
+      "name": "Python: main.py",
+      "type": "python",
+      "state": "paused",
+      "parent": null,
+      "children": ["worker-456", "worker-789"]
+    }
+  ],
+  "total": 3
+}
+```
+
+#### get_session_hierarchy
+
+Gets the debug session hierarchy as a tree structure. Useful for visualizing parent-child relationships in multi-process debugging.
+
+**Parameters:** None
+
+#### get_session_info
+
+Gets detailed information about a specific debug session by ID. Includes parent, children, state, and session metadata.
+
+**Parameters:**
+
+- `sessionId` (string, required): ID of the debug session to get info for
+
+**Example:**
+
+```json
+{
+  "sessionId": "worker-456"
+}
+```
 
 #### set_breakpoint
 
@@ -258,42 +343,53 @@ Clears all breakpoints from all files in the workspace.
 
 #### continue_execution
 
-Continues program execution until the next breakpoint is hit or the program terminates.
+Continues program execution until the next breakpoint is hit or the program terminates. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### pause_execution
 
-Pauses the currently running program at its current execution point.
+Pauses the currently running program at its current execution point. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### step_over
 
-Steps over the current line of code, executing it without entering any function calls.
+Steps over the current line of code, executing it without entering any function calls. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### step_into
 
-Steps into the function call on the current line to debug inside the called function.
+Steps into the function call on the current line to debug inside the called function. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### step_out
 
-Steps out of the current function, continuing execution until it returns to the calling function.
+Steps out of the current function, continuing execution until it returns to the calling function. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### evaluate_expression
 
-Evaluates an expression in the context of a paused debug session and returns its result.
+Evaluates an expression in the context of a paused debug session and returns its result. Can target a specific session in multi-process debugging.
 
 **Parameters:**
 
 - `expression` (string, required): Expression to evaluate (e.g., "x + y", "user.name", "len(items)"). Uses the current stack frame context.
 - `frameId` (number, optional): Optional stack frame ID from get_stack_frames. If omitted, evaluates in the topmost (current) frame.
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 **Example:**
 
@@ -304,25 +400,61 @@ Evaluates an expression in the context of a paused debug session and returns its
 }
 ```
 
+#### list_threads
+
+Lists all threads in the debug session with their IDs and names. Use this to see which threads are available before calling `get_stack_frames` with a specific `threadId`.
+
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
+
+**Example output:**
+
+```json
+{
+  "threads": [
+    { "id": 1, "name": "MainThread" },
+    { "id": 2, "name": "Worker-1" },
+    { "id": 3, "name": "Worker-2" }
+  ],
+  "total": 3
+}
+```
+
 #### get_stack_frames
 
-Gets the current call stack frames including file locations, line numbers, and frame IDs.
+Gets the current call stack frames including file locations, line numbers, and frame IDs. Can optionally specify which thread to get frames from for multi-threaded debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `threadId` (number, optional): Optional thread ID. If omitted, returns stack frames from the first thread. Use `list_threads` to see all thread IDs
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
+
+**Example:**
+
+```json
+{
+  "threadId": 2,
+  "sessionId": "worker-123"
+}
+```
 
 #### get_variables
 
-Gets all variables and their values in the current scope including locals, globals, and closure variables.
+Gets all variables and their values in the current scope including locals, globals, and closure variables. Can target a specific session in multi-process debugging.
 
 **Parameters:**
 
 - `frameId` (number, optional): Optional stack frame ID from get_stack_frames. If omitted, returns variables from the topmost (current) frame.
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 #### get_current_location
 
-Returns the exact file path, line number, and column where execution is currently paused in the debugger. Use this to understand the current execution context before inspecting variables or evaluating expressions.
+Returns the exact file path, line number, and column where execution is currently paused in the debugger. Use this to understand the current execution context before inspecting variables or evaluating expressions. Can target a specific session in multi-process debugging.
 
-**Parameters:** None
+**Parameters:**
+
+- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
 ## Configuration
 
@@ -410,7 +542,7 @@ Then update your MCP client configuration to use the new port. The exact format 
 
 ### Debug configurations
 
-The extension uses VS Code's debug configurations from your workspace's `.vscode/launch.json` file. You must have at least one debug configuration set up for your project before using the MCP Debug Hub.
+The extension uses VS Code's debug configurations from your workspace settings. Configurations can be stored in `.vscode/launch.json` (single-root workspaces) or `workspace.code-workspace` (multi-root workspaces). You must have at least one debug configuration set up for your project before using the MCP Debug Hub.
 
 Example `launch.json`:
 
@@ -463,8 +595,7 @@ npm test
 
 ## Known limitations
 
-- The extension requires an active VS Code workspace with a `launch.json` file
-- Only one debug session can be active at a time
+- The extension requires an active VS Code workspace with debug configurations
 - Some debug adapters may have limited support for certain features (e.g., conditional breakpoints)
 - The SSE transport requires the MCP client to support Server-Sent Events
 

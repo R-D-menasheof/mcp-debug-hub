@@ -5,44 +5,43 @@ import type { ThreadInfo } from "@/types";
 const logger = getLogger();
 
 export class Execution {
-  async continue(threadId?: number): Promise<void> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async continue(session?: vscode.DebugSession): Promise<void> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
-
     await vscode.commands.executeCommand("workbench.action.debug.continue");
   }
 
-  async stepOver(): Promise<void> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async stepOver(session?: vscode.DebugSession): Promise<void> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     await vscode.commands.executeCommand("workbench.action.debug.stepOver");
   }
 
-  async stepInto(): Promise<void> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async stepInto(session?: vscode.DebugSession): Promise<void> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
 
     await vscode.commands.executeCommand("workbench.action.debug.stepInto");
   }
 
-  async stepOut(): Promise<void> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async stepOut(session?: vscode.DebugSession): Promise<void> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
     await vscode.commands.executeCommand("workbench.action.debug.stepOut");
   }
 
-  async pause(): Promise<void> {
-    const session = vscode.debug.activeDebugSession;
-    if (!session) {
+  async pause(session?: vscode.DebugSession): Promise<void> {
+    const targetSession = session || vscode.debug.activeDebugSession;
+    if (!targetSession) {
       throw new Error("No active debug session");
     }
     await vscode.commands.executeCommand("workbench.action.debug.pause");
@@ -63,9 +62,9 @@ export class Execution {
     } catch (error) {
       logger.warn("Failed to get threads", {
         error: error instanceof Error ? error.message : String(error),
+        sessionId: session.id,
       });
       return [];
     }
   }
 }
-

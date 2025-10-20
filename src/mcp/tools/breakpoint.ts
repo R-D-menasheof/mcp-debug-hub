@@ -4,6 +4,7 @@ import type { Debug } from '@/managers/debug';
 import type { Mutex } from '@/mutex';
 import { z } from 'zod';
 import { getLogger } from '@/logger';
+import { createErrorResult } from '../utils';
 
 const logger = getLogger();
 
@@ -55,8 +56,8 @@ export function registerBreakpointTools(
             }],
           };
         } catch (error) {
-          logger.error('[set_breakpoint] Error:', error instanceof Error ? error : new Error(String(error)));
-          throw error;
+          logger.debug('[set_breakpoint] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
         }
       });
     }
@@ -125,8 +126,8 @@ export function registerBreakpointTools(
             }],
           };
         } catch (error) {
-          logger.error('[set_breakpoints] Error:', error instanceof Error ? error : new Error(String(error)));
-          throw error;
+          logger.debug('[set_breakpoints] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
         }
       });
     }
@@ -148,8 +149,8 @@ export function registerBreakpointTools(
             }],
           };
         } catch (error) {
-          logger.error('[remove_breakpoint] Error:', error instanceof Error ? error : new Error(String(error)));
-          throw error;
+          logger.debug('[remove_breakpoint] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
         }
       });
     }
@@ -171,8 +172,8 @@ export function registerBreakpointTools(
             }],
           };
         } catch (error) {
-          logger.error('[list_breakpoints] Error:', error instanceof Error ? error : new Error(String(error)));
-          throw error;
+          logger.debug('[list_breakpoints] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
         }
       });
     }
@@ -194,8 +195,8 @@ export function registerBreakpointTools(
             }],
           };
         } catch (error) {
-          logger.error('[clear_all_breakpoints] Error:', error instanceof Error ? error : new Error(String(error)));
-          throw error;
+          logger.debug('[clear_all_breakpoints] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
         }
       });
     }
