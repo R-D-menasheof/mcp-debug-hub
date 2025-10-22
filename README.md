@@ -59,9 +59,6 @@ Go to `Cursor Settings` -> `MCP` -> Edit Config (or directly edit `~/.cursor/mcp
 }
 ```
 
-> [!TIP]
-> Note that Cursor uses the `/mcp` endpoint (not `/sse`) and a simpler configuration format.
-
 </details>
 
 <details>
@@ -77,7 +74,7 @@ Follow the [Cline MCP documentation](https://docs.cline.bot/mcp/configuring-mcp-
       "args": [],
       "transport": {
         "type": "sse",
-        "url": "http://localhost:37337/sse"
+        "url": "http://localhost:37337/mcp"
       }
     }
   }
@@ -99,7 +96,7 @@ Add the configuration to your Continue config file (`~/.continue/config.json`):
     "debug-mcp": {
       "transport": {
         "type": "sse",
-        "url": "http://localhost:37337/sse"
+        "url": "http://localhost:37337/mcp"
       }
     }
   }
@@ -388,21 +385,31 @@ Evaluates an expression in the context of a paused debug session and returns its
 **Parameters:**
 
 - `expression` (string, required): Expression to evaluate (e.g., "x + y", "user.name", "len(items)"). Uses the current stack frame context.
-- `frameId` (number, optional): Optional stack frame ID from get_stack_frames. If omitted, evaluates in the topmost (current) frame.
+- `frameId` (number, optional): Optional stack frame ID from `get_stack_frames`. If provided, `threadId` is ignored.
+- `threadId` (number, optional): Optional thread ID. Required if `frameId` is not provided. Use `list_threads` to see available threads.
 - `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
 
-**Example:**
+**Note:** Either `frameId` or `threadId` must be provided. Call `list_threads` first to see available threads, then specify `threadId` to evaluate in a specific thread's context.
+
+**Examples:**
 
 ```json
 {
   "expression": "user.name",
-  "frameId": 0
+  "threadId": 1
+}
+```
+
+```json
+{
+  "expression": "len(items)",
+  "frameId": 2
 }
 ```
 
 #### list_threads
 
-Lists all threads in the debug session with their IDs and names. Use this to see which threads are available before calling `get_stack_frames` with a specific `threadId`.
+Lists all threads in the debug session with their IDs and names. Use this to see which threads are available before calling `get_stack_frames`, `evaluate_expression`, or `get_variables` with a specific `threadId`.
 
 **Parameters:**
 
@@ -445,8 +452,26 @@ Gets all variables and their values in the current scope including locals, globa
 
 **Parameters:**
 
-- `frameId` (number, optional): Optional stack frame ID from get_stack_frames. If omitted, returns variables from the topmost (current) frame.
+- `frameId` (number, optional): Optional stack frame ID from `get_stack_frames`. If provided, `threadId` is ignored.
+- `threadId` (number, optional): Optional thread ID. Required if `frameId` is not provided. Use `list_threads` to see available threads.
 - `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
+
+**Note:** Either `frameId` or `threadId` must be provided. Call `list_threads` first to see available threads, then specify `threadId` to get variables from a specific thread's context.
+
+**Examples:**
+
+```json
+{
+  "threadId": 1
+}
+```
+
+```json
+{
+  "frameId": 2,
+  "sessionId": "worker-123"
+}
+```
 
 #### get_current_location
 
@@ -517,7 +542,7 @@ Then update your MCP client configuration to use the new port. The exact format 
       "args": [],
       "transport": {
         "type": "sse",
-        "url": "http://localhost:8080/sse"
+        "url": "http://localhost:8080/mcp"
       }
     }
   }
@@ -531,7 +556,7 @@ Then update your MCP client configuration to use the new port. The exact format 
     "debug-mcp": {
       "transport": {
         "type": "sse",
-        "url": "http://localhost:8080/sse"
+        "url": "http://localhost:8080/mcp"
       }
     }
   }
@@ -585,7 +610,7 @@ npm run compile
 1. Open the project in VS Code
 2. Press F5 to start debugging
 3. A new VS Code window will open with the extension loaded
-4. Configure your MCP client to connect to `http://localhost:37337/sse`
+4. Configure your MCP client to connect to `http://localhost:37337/mcp`
 
 ### Running tests
 

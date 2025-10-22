@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(`${EXTENSION_ID}.showStatus`, () => {
       logger.info("Show status command called");
       const status = mcpServer.isServerRunning()
-        ? `MCP Server is running at ${mcpServer.getUrl()}\nActive connections: ${mcpServer.getActiveConnectionCount()}`
+        ? `MCP Server is running at ${mcpServer.getUrl()}`
         : "MCP Server is stopped";
       vscode.window.showInformationMessage(status);
       logger.show();

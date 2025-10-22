@@ -8,6 +8,7 @@ export class Inspection {
   async evaluateExpression(
     expression: string,
     frameId?: number,
+    threadId?: number,
     context?: "watch" | "repl" | "hover",
     session?: vscode.DebugSession,
   ): Promise<string> {
@@ -18,8 +19,23 @@ export class Inspection {
 
     try {
       let actualFrameId = frameId;
+
       if (actualFrameId === undefined) {
-        actualFrameId = await this.getCurrentFrameId(targetSession);
+        if (!threadId) {
+          throw new Error("Either frameId or threadId must be provided. Use list_threads to see available threads.");
+        }
+
+        const stackResponse = await targetSession.customRequest("stackTrace", {
+          threadId,
+          startFrame: 0,
+          levels: 1,
+        });
+
+        if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
+          throw new Error(`No stack frames found for thread ${threadId}. Is the thread paused?`);
+        }
+
+        actualFrameId = stackResponse.stackFrames[0].id;
       }
 
       const response = await targetSession.customRequest("evaluate", {
@@ -109,6 +125,7 @@ export class Inspection {
 
   async getScopes(
     frameId?: number,
+    threadId?: number,
     session?: vscode.DebugSession,
   ): Promise<any[]> {
     const targetSession = session || vscode.debug.activeDebugSession;
@@ -118,8 +135,23 @@ export class Inspection {
 
     try {
       let actualFrameId = frameId;
+
       if (actualFrameId === undefined) {
-        actualFrameId = await this.getCurrentFrameId(targetSession);
+        if (!threadId) {
+          throw new Error("Either frameId or threadId must be provided. Use list_threads to see available threads.");
+        }
+
+        const stackResponse = await targetSession.customRequest("stackTrace", {
+          threadId,
+          startFrame: 0,
+          levels: 1,
+        });
+
+        if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
+          throw new Error(`No stack frames found for thread ${threadId}. Is the thread paused?`);
+        }
+
+        actualFrameId = stackResponse.stackFrames[0].id;
       }
 
       const response = await targetSession.customRequest("scopes", {
@@ -192,23 +224,4 @@ export class Inspection {
     }
   }
 
-  private async getCurrentFrameId(session: vscode.DebugSession): Promise<number> {
-    const threadsResponse = await session.customRequest("threads");
-    if (!threadsResponse?.threads || threadsResponse.threads.length === 0) {
-      throw new Error("No threads found in debug session");
-    }
-
-    const threadId = threadsResponse.threads[0].id;
-    const stackResponse = await session.customRequest("stackTrace", {
-      threadId,
-      startFrame: 0,
-      levels: 1,
-    });
-
-    if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
-      throw new Error("No stack frames found. Is the debugger paused?");
-    }
-
-    return stackResponse.stackFrames[0].id;
-  }
 }

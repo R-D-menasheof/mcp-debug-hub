@@ -16,10 +16,10 @@ export function registerTools(
 ): void {
   logger.info('Registering MCP tools...');
 
-  registerSessionTools(mcpServer, debugManager, mutex);
   registerBreakpointTools(mcpServer, debugManager, mutex);
-  registerInspectionTools(mcpServer, debugManager, mutex);
   registerExecutionTools(mcpServer, debugManager, mutex);
+  registerInspectionTools(mcpServer, debugManager, mutex);
+  registerSessionTools(mcpServer, debugManager, mutex);
 
   logger.info('✓ All MCP tools registered');
 }

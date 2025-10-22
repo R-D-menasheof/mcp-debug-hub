@@ -10,12 +10,14 @@ const logger = getLogger();
 
 const evaluateExpressionSchema = z.object({
   expression: z.string().describe('Expression to evaluate (e.g., "x + y", "user.name", "len(items)"). Uses the current stack frame context.'),
-  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If omitted, evaluates in the topmost (current) frame.'),
+  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If provided, threadId is ignored.'),
+  threadId: z.number().int().optional().describe('Optional thread ID. Required if frameId is not provided. Use list_threads to see available threads.'),
   sessionId: z.string().optional().describe('Optional session ID. If not provided, operates on the active debug session'),
 });
 
 const getVariablesSchema = z.object({
-  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If omitted, returns variables from the topmost (current) frame.'),
+  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If provided, threadId is ignored.'),
+  threadId: z.number().int().optional().describe('Optional thread ID. Required if frameId is not provided. Use list_threads to see available threads.'),
   sessionId: z.string().optional().describe('Optional session ID. If not provided, operates on the active debug session'),
 });
 
@@ -35,23 +37,32 @@ export function registerInspectionTools(
 ): void {
   mcpServer.tool(
     'evaluate_expression',
-    'Evaluates an expression in the context of a paused debug session and returns its result. Can target a specific session in multi-process debugging',
+    'Evaluates an expression in the context of a paused debug session and returns its result. Can target a specific session in multi-process debugging. Either frameId or threadId must be provided - use list_threads first to get available threads.',        
     evaluateExpressionSchema.shape,
     async (args): Promise<CallToolResult> => {
       return mutex.runExclusive(async () => {
         try {
           const session = args.sessionId
             ? debugManager.sessions.getSession(args.sessionId)
-            : undefined;
+            : debugManager.sessions.getActiveSession();
 
           if (args.sessionId && !session) {
             throw new Error(`Session ${args.sessionId} not found`);
           }
 
-          logger.debug(`[evaluate_expression] ${args.expression}`, { sessionId: args.sessionId });
+          if (!session) {
+            throw new Error('No active debug session');
+          }
+
+          logger.debug(`[evaluate_expression] ${args.expression}`, {
+            sessionId: args.sessionId,
+            frameId: args.frameId,
+            threadId: args.threadId
+          });
           const result = await debugManager.inspection.evaluateExpression(
             args.expression,
             args.frameId,
+            args.threadId,
             undefined,
             session
           );
@@ -154,22 +165,30 @@ export function registerInspectionTools(
 
   mcpServer.tool(
     'get_variables',
-    'Gets all variables and their values in the current scope including locals, globals, and closure variables. Can target a specific session in multi-process debugging',
+    'Gets all variables and their values in the current scope including locals, globals, and closure variables. Can target a specific session in multi-process debugging. Either frameId or threadId must be provided - use list_threads first to get available threads.',                                                                      
     getVariablesSchema.shape,
     async (args): Promise<CallToolResult> => {
       return mutex.runExclusive(async () => {
         try {
           const session = args.sessionId
             ? debugManager.sessions.getSession(args.sessionId)
-            : undefined;
+            : debugManager.sessions.getActiveSession();
 
           if (args.sessionId && !session) {
             throw new Error(`Session ${args.sessionId} not found`);
           }
 
-          logger.debug('[get_variables] Getting variables', { frameId: args.frameId, sessionId: args.sessionId });
+          if (!session) {
+            throw new Error('No active debug session');
+          }
 
-          const scopes = await debugManager.inspection.getScopes(args.frameId, session);
+          logger.debug('[get_variables] Getting variables', {
+            frameId: args.frameId,
+            threadId: args.threadId,
+            sessionId: args.sessionId
+          });
+
+          const scopes = await debugManager.inspection.getScopes(args.frameId, args.threadId, session);
           
           const allVariables: Record<string, any> = {};
           for (const scope of scopes) {
@@ -202,7 +221,7 @@ export function registerInspectionTools(
         try {
           const session = args.sessionId
             ? debugManager.sessions.getSession(args.sessionId)
-            : undefined;
+            : debugManager.sessions.getActiveSession();
 
           if (args.sessionId && !session) {
             throw new Error(`Session ${args.sessionId} not found`);

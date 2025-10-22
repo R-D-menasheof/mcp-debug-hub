@@ -82,7 +82,6 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
           url: this._mcpServer.getUrl(),
           port: this._mcpServer.getPort(),
           host: this._configManager.sseHost,
-          activeConnections: this._mcpServer.getActiveConnectionCount(),
           autostart: this._configManager.autostart,
         },
       });
@@ -231,31 +230,6 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       font-weight: 600;
       font-family: var(--vscode-editor-font-family);
       color: var(--vscode-foreground);
-    }
-
-    .connection-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--spacing-xs);
-      padding: 2px var(--spacing-sm);
-      background: var(--vscode-badge-background);
-      color: var(--vscode-badge-foreground);
-      border-radius: var(--radius);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .connection-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--vscode-testing-iconPassed);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
     }
 
     .metrics {
@@ -485,24 +459,17 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
         <span class="info-label">Port</span>
         <span id="serverPort" class="info-value">-</span>
       </div>
-      <div class="info-row">
-        <span class="info-label">Connections</span>
-        <span id="connections" class="connection-badge">
-          <span class="connection-dot"></span>
-          <span id="connectionCount">0</span>
-        </span>
-      </div>
     </div>
   </div>
 
   <div class="metrics">
     <div class="metric-card">
-      <div id="metricSessions" class="metric-value">0</div>
-      <div class="metric-label">Active</div>
-    </div>
-    <div class="metric-card">
       <div id="metricUptime" class="metric-value">0m</div>
       <div class="metric-label">Uptime</div>
+    </div>
+    <div class="metric-card">
+      <div id="metricPort" class="metric-value">-</div>
+      <div class="metric-label">Port</div>
     </div>
     <div class="metric-card">
       <div id="metricErrors" class="metric-value">0</div>
@@ -608,8 +575,7 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
       const btnStop = document.getElementById('btnStop');
       const serverUrl = document.getElementById('serverUrl');
       const serverPort = document.getElementById('serverPort');
-      const connectionCount = document.getElementById('connectionCount');
-      const metricSessions = document.getElementById('metricSessions');
+      const metricPort = document.getElementById('metricPort');
       const metricUptime = document.getElementById('metricUptime');
       const toggleAutostart = document.getElementById('toggleAutostart');
 
@@ -620,6 +586,7 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
         btnStop.classList.remove('hidden');
         serverUrl.textContent = data.url;
         serverPort.textContent = data.port;
+        metricPort.textContent = data.port;
         
         if (!startTime) {
           startTime = Date.now();
@@ -633,12 +600,11 @@ export class StatusViewProvider implements vscode.WebviewViewProvider {
         btnStop.classList.add('hidden');
         serverUrl.textContent = 'Not running';
         serverPort.textContent = '-';
+        metricPort.textContent = '-';
         startTime = null;
         metricUptime.textContent = '0m';
       }
 
-      connectionCount.textContent = data.activeConnections;
-      metricSessions.textContent = data.activeConnections;
       toggleAutostart.checked = data.autostart;
     }
   </script>

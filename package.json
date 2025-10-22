@@ -3,7 +3,7 @@
   "publisher": "RDMenasheof",
   "displayName": "MCP Debug Hub",
   "description": "VS code extension debug server with MCP API",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "images/logo.png",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "vscode": "^1.99.0"
   },
   "categories": [
-    "Other"
+    "AI"
   ],
   "activationEvents": [
     "onStartupFinished"
