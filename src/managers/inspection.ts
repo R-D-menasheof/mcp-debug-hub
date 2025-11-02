@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { getLogger } from "@/logger";
 import type { StackFrameInfo, VariableInfo, DebugLocation } from "@/types";
+import { getFrameFromActiveStackItem, NO_FRAME_ID, resolveFrameIdFromThreadId } from "@/mcp/utils";
 
 const logger = getLogger();
 
@@ -19,23 +20,25 @@ export class Inspection {
 
     try {
       let actualFrameId = frameId;
+      let actualThreadId = threadId;
 
       if (actualFrameId === undefined) {
-        if (!threadId) {
-          throw new Error("Either frameId or threadId must be provided. Use list_threads to see available threads.");
+        const activeInfo = getFrameFromActiveStackItem();
+
+        if (activeInfo && activeInfo.frameId !== NO_FRAME_ID) {
+          actualFrameId = activeInfo.frameId;
+          logger.debug("Using frameId from active stack item", { frameId: actualFrameId });
+        } else if (actualThreadId) {
+          logger.debug("Resolving frameId from threadId", { threadId: actualThreadId });
+          actualFrameId = await resolveFrameIdFromThreadId(targetSession, actualThreadId);
+        } else {
+          throw new Error(
+            "No frame context available. Either:\n" +
+            "1. Select a frame in the Call Stack view, OR\n" +
+            "2. Provide frameId parameter, OR\n" +
+            "3. Provide threadId parameter (use list_threads to see available threads)"
+          );
         }
-
-        const stackResponse = await targetSession.customRequest("stackTrace", {
-          threadId,
-          startFrame: 0,
-          levels: 1,
-        });
-
-        if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
-          throw new Error(`No stack frames found for thread ${threadId}. Is the thread paused?`);
-        }
-
-        actualFrameId = stackResponse.stackFrames[0].id;
       }
 
       const response = await targetSession.customRequest("evaluate", {
@@ -135,23 +138,25 @@ export class Inspection {
 
     try {
       let actualFrameId = frameId;
+      let actualThreadId = threadId;
 
       if (actualFrameId === undefined) {
-        if (!threadId) {
-          throw new Error("Either frameId or threadId must be provided. Use list_threads to see available threads.");
+        const activeInfo = getFrameFromActiveStackItem();
+
+        if (activeInfo && activeInfo.frameId !== NO_FRAME_ID) {
+          actualFrameId = activeInfo.frameId;
+          logger.debug("Using frameId from active stack item", { frameId: actualFrameId });
+        } else if (actualThreadId) {
+          logger.debug("Resolving frameId from threadId", { threadId: actualThreadId });
+          actualFrameId = await resolveFrameIdFromThreadId(targetSession, actualThreadId);
+        } else {
+          throw new Error(
+            "No frame context available. Either:\n" +
+            "1. Select a frame in the Call Stack view, OR\n" +
+            "2. Provide frameId parameter, OR\n" +
+            "3. Provide threadId parameter (use list_threads to see available threads)"
+          );
         }
-
-        const stackResponse = await targetSession.customRequest("stackTrace", {
-          threadId,
-          startFrame: 0,
-          levels: 1,
-        });
-
-        if (!stackResponse?.stackFrames || stackResponse.stackFrames.length === 0) {
-          throw new Error(`No stack frames found for thread ${threadId}. Is the thread paused?`);
-        }
-
-        actualFrameId = stackResponse.stackFrames[0].id;
       }
 
       const response = await targetSession.customRequest("scopes", {

@@ -4,20 +4,20 @@ import type { Debug } from '@/managers/debug';
 import type { Mutex } from '@/mutex';
 import { z } from 'zod';
 import { getLogger } from '@/logger';
-import { createErrorResult } from '../utils';
+import { createErrorResult, getFrameFromActiveStackItem, NO_FRAME_ID } from '../utils';
 
 const logger = getLogger();
 
 const evaluateExpressionSchema = z.object({
   expression: z.string().describe('Expression to evaluate (e.g., "x + y", "user.name", "len(items)"). Uses the current stack frame context.'),
-  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If provided, threadId is ignored.'),
-  threadId: z.number().int().optional().describe('Optional thread ID. Required if frameId is not provided. Use list_threads to see available threads.'),
+  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If not provided, uses the frame selected in VS Code\'s Call Stack view.'),
+  threadId: z.number().int().optional().describe('Optional thread ID. If provided along with no frameId, resolves to the top frame of this thread. Use list_threads to see available threads.'),
   sessionId: z.string().optional().describe('Optional session ID. If not provided, operates on the active debug session'),
 });
 
 const getVariablesSchema = z.object({
-  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If provided, threadId is ignored.'),
-  threadId: z.number().int().optional().describe('Optional thread ID. Required if frameId is not provided. Use list_threads to see available threads.'),
+  frameId: z.number().int().optional().describe('Optional stack frame ID from get_stack_frames. If not provided, uses the frame selected in VS Code\'s Call Stack view.'),
+  threadId: z.number().int().optional().describe('Optional thread ID. If provided along with no frameId, resolves to the top frame of this thread. Use list_threads to see available threads.'),
   sessionId: z.string().optional().describe('Optional session ID. If not provided, operates on the active debug session'),
 });
 
@@ -26,7 +26,7 @@ const sessionSchema = z.object({
 });
 
 const getStackFramesSchema = z.object({
-  threadId: z.number().int().optional().describe('Optional thread ID. If omitted, returns stack frames from the first thread. Use get_current_location to see all thread IDs'),
+  threadId: z.number().int().optional().describe('Optional thread ID. If not provided, uses the thread from the frame selected in VS Code\'s Call Stack view, or falls back to the first thread.'),
   sessionId: z.string().optional().describe('Optional session ID. If not provided, operates on the active debug session'),
 });
 
@@ -37,7 +37,7 @@ export function registerInspectionTools(
 ): void {
   mcpServer.tool(
     'evaluate_expression',
-    'Evaluates an expression in the context of a paused debug session and returns its result. Can target a specific session in multi-process debugging. Either frameId or threadId must be provided - use list_threads first to get available threads.',        
+    'Evaluates an expression in the context of a paused debug session and returns its result. Automatically uses the frame selected in VS Code\'s Call Stack view if no frameId/threadId is provided. Can target a specific session in multi-process debugging.',        
     evaluateExpressionSchema.shape,
     async (args): Promise<CallToolResult> => {
       return mutex.runExclusive(async () => {
@@ -119,7 +119,7 @@ export function registerInspectionTools(
 
   mcpServer.tool(
     'get_stack_frames',
-    'Gets the current call stack frames including file locations, line numbers, and frame IDs. Can optionally specify which thread to get frames from. Use list_threads to see all available threads and their IDs',
+    'Gets the current call stack frames including file locations, line numbers, and frame IDs. Automatically uses the thread from the frame selected in VS Code\'s Call Stack view if no threadId is provided.',
     getStackFramesSchema.shape,
     async (args): Promise<CallToolResult> => {
       return mutex.runExclusive(async () => {
@@ -141,11 +141,19 @@ export function registerInspectionTools(
           let targetThreadId = args.threadId;
 
           if (!targetThreadId) {
-            const threads = await debugManager.execution.getThreads(session);
-            if (!threads || threads.length === 0) {
-              throw new Error('No active threads found');
+            const activeInfo = getFrameFromActiveStackItem();
+
+            if (activeInfo && activeInfo.frameId !== NO_FRAME_ID) {
+              targetThreadId = activeInfo.threadId;
+              logger.debug('[get_stack_frames] Using threadId from active stack item', { threadId: targetThreadId });
+            } else {
+              const threads = await debugManager.execution.getThreads(session);
+              if (!threads || threads.length === 0) {
+                throw new Error('No active threads found');
+              }
+              targetThreadId = threads[0].id;
+              logger.debug('[get_stack_frames] Using first thread as fallback', { threadId: targetThreadId });
             }
-            targetThreadId = threads[0].id;
           }
           
           const frames = await debugManager.inspection.getStackTrace(targetThreadId, session);
@@ -165,7 +173,7 @@ export function registerInspectionTools(
 
   mcpServer.tool(
     'get_variables',
-    'Gets all variables and their values in the current scope including locals, globals, and closure variables. Can target a specific session in multi-process debugging. Either frameId or threadId must be provided - use list_threads first to get available threads.',                                                                      
+    'Gets all variables and their values in the current scope including locals, globals, and closure variables. Automatically uses the frame selected in VS Code\'s Call Stack view if no frameId/threadId is provided. Can target a specific session in multi-process debugging.',                                                                      
     getVariablesSchema.shape,
     async (args): Promise<CallToolResult> => {
       return mutex.runExclusive(async () => {

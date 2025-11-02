@@ -6,8 +6,9 @@
 
 ## Key features
 
-- **Debug session control**: Launch, stop, and manage VS Code debug sessions programmatically
+- **Debug session control**: Launch, stop, attach to processes, and manage VS Code debug sessions programmatically
 - **Multi-process debugging**: Debug parent-child process hierarchies with full support for subprocesses, workers, and spawned processes
+- **Smart context detection**: Automatically uses the frame selected in VS Code's Call Stack view for inspection operations
 - **Breakpoint management**: Set, remove, and list breakpoints with conditions, hit counts, and log messages
 - **Code execution control**: Step through code, continue execution, and pause at any point
 - **Runtime inspection**: Evaluate expressions, inspect variables, and examine call stacks
@@ -128,11 +129,13 @@ Your MCP client should launch the debug session and set the breakpoint.
 
 <!-- Tool categories organized by functionality -->
 
-- **Debug session management** (7 tools)
+- **Debug session management** (9 tools)
 
   - [`launch_debug`](#launch_debug)
   - [`launch_child_debug`](#launch_child_debug)
+  - [`attach_to_process`](#attach_to_process)
   - [`stop_debug`](#stop_debug)
+  - [`list_launch_configurations`](#list_launch_configurations)
   - [`get_debug_state`](#get_debug_state)
   - [`list_debug_sessions`](#list_debug_sessions)
   - [`get_session_hierarchy`](#get_session_hierarchy)
@@ -201,6 +204,25 @@ Launches a new debug session as a child of an existing session. Useful for debug
 }
 ```
 
+#### attach_to_process
+
+Attaches the debugger to an already-running process by its PID or process name.
+
+**Parameters:**
+
+- `configuration` (string, required): Name of an attach-type debug configuration with `"request": "attach"`
+- `processId` (number, optional): Process ID to attach to. Either processId or processName required.
+- `processName` (string, optional): Process name to attach to (e.g., "python3", "node"). Either processId or processName required.
+
+**Example:**
+
+```json
+{
+  "configuration": "Python: Attach",
+  "processId": 12345
+}
+```
+
 #### stop_debug
 
 Stops a debug session and terminates the debugged program. Can target a specific session in multi-process debugging.
@@ -214,6 +236,24 @@ Stops a debug session and terminates the debugged program. Can target a specific
 ```json
 {
   "sessionId": "worker-123"
+}
+```
+
+#### list_launch_configurations
+
+Lists all available debug launch configurations from workspace settings.
+
+**Parameters:** None
+
+**Example output:**
+
+```json
+{
+  "configurations": [
+    { "name": "Python: Current File", "type": "python", "request": "launch" },
+    { "name": "Python: Attach", "type": "python", "request": "attach" }
+  ],
+  "total": 2
 }
 ```
 
@@ -380,16 +420,14 @@ Steps out of the current function, continuing execution until it returns to the 
 
 #### evaluate_expression
 
-Evaluates an expression in the context of a paused debug session and returns its result. Can target a specific session in multi-process debugging.
+Evaluates an expression in the context of a paused debug session and returns its result. Automatically uses the frame selected in VS Code's Call Stack view if no frameId/threadId is provided.
 
 **Parameters:**
 
-- `expression` (string, required): Expression to evaluate (e.g., "x + y", "user.name", "len(items)"). Uses the current stack frame context.
-- `frameId` (number, optional): Optional stack frame ID from `get_stack_frames`. If provided, `threadId` is ignored.
-- `threadId` (number, optional): Optional thread ID. Required if `frameId` is not provided. Use `list_threads` to see available threads.
-- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
-
-**Note:** Either `frameId` or `threadId` must be provided. Call `list_threads` first to see available threads, then specify `threadId` to evaluate in a specific thread's context.
+- `expression` (string, required): Expression to evaluate (e.g., "x + y", "user.name", "len(items)").
+- `frameId` (number, optional): Stack frame ID from `get_stack_frames`. If not provided, uses the active frame from Call Stack view.
+- `threadId` (number, optional): Thread ID. If provided with no frameId, uses the top frame of this thread.
+- `sessionId` (string, optional): Session ID. If not provided, operates on the active debug session.
 
 **Examples:**
 
@@ -448,15 +486,13 @@ Gets the current call stack frames including file locations, line numbers, and f
 
 #### get_variables
 
-Gets all variables and their values in the current scope including locals, globals, and closure variables. Can target a specific session in multi-process debugging.
+Gets all variables and their values in the current scope including locals, globals, and closure variables. Automatically uses the frame selected in VS Code's Call Stack view if no frameId/threadId is provided.
 
 **Parameters:**
 
-- `frameId` (number, optional): Optional stack frame ID from `get_stack_frames`. If provided, `threadId` is ignored.
-- `threadId` (number, optional): Optional thread ID. Required if `frameId` is not provided. Use `list_threads` to see available threads.
-- `sessionId` (string, optional): Optional session ID. If not provided, operates on the active debug session
-
-**Note:** Either `frameId` or `threadId` must be provided. Call `list_threads` first to see available threads, then specify `threadId` to get variables from a specific thread's context.
+- `frameId` (number, optional): Stack frame ID from `get_stack_frames`. If not provided, uses the active frame from Call Stack view.
+- `threadId` (number, optional): Thread ID. If provided with no frameId, uses the top frame of this thread.
+- `sessionId` (string, optional): Session ID. If not provided, operates on the active debug session.
 
 **Examples:**
 

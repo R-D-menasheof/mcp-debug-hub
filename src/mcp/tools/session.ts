@@ -5,7 +5,7 @@ import type { Debug } from '@/managers/debug';
 import type { Mutex } from '@/mutex';
 import { z } from 'zod';
 import { getLogger } from '@/logger';
-import { createErrorResult } from '../utils';
+import { createErrorResult, getAllLaunchConfigurations } from '../utils';
 
 const logger = getLogger();
 
@@ -26,6 +26,12 @@ const stopDebugSchema = z.object({
 
 const getSessionInfoSchema = z.object({
   sessionId: z.string().describe('ID of the debug session to get info for'),
+});
+
+const attachToProcessSchema = z.object({
+  configuration: z.string().describe('Name of an attach-type debug configuration from workspace settings. Must have "request": "attach".'),
+  processId: z.number().int().optional().describe('Process ID (PID) to attach to. Either processId or processName must be provided.'),
+  processName: z.string().optional().describe('Process name to attach to (e.g., "python3", "node", "java"). Either processId or processName must be provided.'),
 });
 
 export function registerSessionTools(
@@ -291,6 +297,146 @@ export function registerSessionTools(
           };
         } catch (error) {
           logger.debug('[get_session_info] Error:', { error: error instanceof Error ? error.message : String(error) });
+          return createErrorResult(error);
+        }
+      });
+    }
+  );
+
+  mcpServer.tool(
+    'list_launch_configurations',
+    'Lists all available debug launch configurations from the workspace settings (launch.json or workspace.code-workspace). Use this to discover what configurations can be used with launch_debug.',
+    {},
+    async (): Promise<CallToolResult> => {
+      return mutex.runExclusive(async () => {
+        try {
+          logger.debug('[list_launch_configurations] Getting all launch configurations');
+
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  configurations: [],
+                  message: 'No workspace folder found. Open a folder or workspace to see launch configurations.'
+                }, null, 2),
+              }],
+            };
+          }
+
+          const configurations = getAllLaunchConfigurations(workspaceFolder);
+
+          if (configurations.length === 0) {
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  configurations: [],
+                  message: 'No launch configurations found. Create a launch.json file to add debug configurations.',
+                  workspaceFolder: workspaceFolder.name
+                }, null, 2),
+              }],
+            };
+          }
+
+          const simplifiedConfigs = configurations.map(config => ({
+            name: config.name,
+            type: config.type,
+            request: config.request,
+          }));
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                configurations: simplifiedConfigs,
+                total: configurations.length,
+                workspaceFolder: workspaceFolder.name
+              }, null, 2),
+            }],
+          };
+        } catch (error) {
+          logger.debug('[list_launch_configurations] Error:', {
+            error: error instanceof Error ? error.message : String(error)
+          });
+          return createErrorResult(error);
+        }
+      });
+    }
+  );
+
+  mcpServer.tool(
+    'attach_to_process',
+    'Attaches the debugger to a running process by its PID or process name using an attach-type debug configuration from launch.json.',
+    attachToProcessSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      return mutex.runExclusive(async () => {
+        try {
+          logger.debug('[attach_to_process] Attaching to process', {
+            configuration: args.configuration,
+            processId: args.processId,
+            processName: args.processName
+          });
+
+          if (!args.processId && !args.processName) {
+            throw new Error('Either processId or processName must be provided');
+          }
+
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            throw new Error('No workspace folder found');
+          }
+
+          const launchConfig = vscode.workspace.getConfiguration('launch', workspaceFolder.uri);
+          const configurations = launchConfig.get<vscode.DebugConfiguration[]>('configurations');
+
+          if (!configurations || configurations.length === 0) {
+            throw new Error('No debug configurations found in workspace settings');
+          }
+
+          const baseConfig = configurations.find(c => c.name === args.configuration);
+          if (!baseConfig) {
+            const available = configurations.map(c => c.name).join(', ');
+            throw new Error(`Configuration '${args.configuration}' not found. Available: ${available}`);
+          }
+
+          if (baseConfig.request !== 'attach') {
+            const attachConfigs = configurations.filter(c => c.request === 'attach').map(c => c.name);
+            throw new Error(
+              `Configuration '${args.configuration}' is not an attach configuration (has "request": "${baseConfig.request}"). ` +
+              (attachConfigs.length > 0
+                ? `Available attach configurations: ${attachConfigs.join(', ')}`
+                : 'No attach configurations found in launch.json. Create one with "request": "attach".')
+            );
+          }
+
+          const attachConfig: vscode.DebugConfiguration = {
+            ...baseConfig,
+          };
+
+          if (args.processId) {
+            attachConfig.processId = args.processId;
+            attachConfig.pid = args.processId;
+          }
+          if (args.processName) {
+            attachConfig.processName = args.processName;
+          }
+
+          logger.debug('[attach_to_process] Starting debug session with config', attachConfig);
+
+          const sessionId = await debugManager.sessions.launch(attachConfig);
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `Successfully attached to process${args.processId ? ` (PID: ${args.processId})` : ''}${args.processName ? ` (Name: ${args.processName})` : ''}\nDebug session ID: ${sessionId}`,
+            }],
+          };
+        } catch (error) {
+          logger.debug('[attach_to_process] Error:', {
+            error: error instanceof Error ? error.message : String(error)
+          });
           return createErrorResult(error);
         }
       });
